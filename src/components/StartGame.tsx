@@ -14,7 +14,7 @@ export default function StartGame() {
       toast.error("Please connect your wallet")      
       return
     }
-    window.location.href = "/game";
+    window.location.href = "/game/find-my-cat";
   }
 
   return (
