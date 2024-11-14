@@ -18,7 +18,7 @@ const blinksightsClient = new BlinksightsClient(BLINKS_INSIGHT_API_KEY!);
 //     const host = req.headers['host'] || 'localhost:3000';
 
 //     // Construct the base URL using the protocol and host
-//     const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
+//     const baseHref = new URL(`/api/create-actions/find-my-cat`, `${protocol}://${host}`).toString();
 
 //     console.log(`Generated baseHref: ${baseHref}`);
     
@@ -79,7 +79,7 @@ export async function GET(req: Request): Promise<Response> {
     const protocol = req.headers.get('x-forwarded-proto') || 'http';
     const host = req.headers.get('host') || 'localhost:3000';
 
-    const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
+    const baseHref = new URL(`/api/actions/create-find-my-cat`, `${protocol}://${host}`).toString();
     console.log(`Generated baseHref: ${baseHref}`);
 
     const actions: LinkedAction[] = [

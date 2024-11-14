@@ -36,7 +36,7 @@ export default function CreateFindMyCatGame() {
   useEffect(() => {
     const fetchGameData = async () => {
       try {
-        const response = await fetch('/api/actions/find-my-cat');
+        const response = await fetch('/api/actions/create-find-my-cat');
         const data: GameResponse = await response.json();
         setGameData(data);
       } catch (error) {
