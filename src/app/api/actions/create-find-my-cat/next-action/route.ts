@@ -15,7 +15,7 @@ import {
   } from "../../../common/types";
   import logger from "../../../common/logger";
   import { getRequestParam } from "../../../common/helper/getParams";
-  import { GenericError } from "../../../common/helper/error";
+  import { GenericError } from "../../../../../../utils/error";
   import { createFindMyCat } from "../../../../../../utils/api.util";
   import { StatusCodes } from "http-status-codes";
   import { jsonResponse, Promisify } from "../../../common/helper/responseMaker";

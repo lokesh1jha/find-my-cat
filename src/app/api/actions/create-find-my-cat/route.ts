@@ -1,225 +1,261 @@
-import { ActionGetResponse, ActionPostResponse, ACTIONS_CORS_HEADERS, createPostResponse, LinkedAction } from "@solana/actions";
+import {
+  ActionPostResponse,
+  createPostResponse,
+  ActionGetResponse,
+  ActionPostRequest,
+  createActionHeaders,
+  ActionError,
+  LinkedAction,
+  ActionParameterSelectable,
+} from "@solana/actions";
 import * as web3 from "@solana/web3.js";
-import type { NextApiRequest, NextApiResponse } from "next";
-import { initWeb3, createFindMyCatGame } from "./helper";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { BlinksightsClient } from "blinksights-sdk";
+import { PublicKey } from "@solana/web3.js";
+import { StatusCodes } from "http-status-codes";
+import { VERIFIED_CURRENCY, CLUSTER_TYPES, ICreateTransaction } from "../../common/types";
 import logger from "../../common/logger";
-import { CreateFindMyCatGameDto } from "./types";
+import { getRequestParam, validateParameters } from "../../common/helper/getParams";
+import { jsonResponse } from "../../common/helper/responseMaker";
+import { calculateTimeRange } from "../../common/helper/parseRelativeTime";
+import { GenericError } from "../../../../../utils/error";
+import { initWeb3 } from "../../common/helper/helper";
+import { ONCHAIN_CONFIG } from "../../common/helper/cluster.helper";
+import { createTransaction } from "../../common/helper/transaction.helper";
 
-const BLINKS_INSIGHT_API_KEY = process.env.BLINKS_INSIGHT_API_KEY;
-const blinksightsClient = new BlinksightsClient(BLINKS_INSIGHT_API_KEY!);
+// create the standard headers for this route (including CORS)
+const headers = createActionHeaders();
 
-// GET handler to create the game (show the form for game creation)
-// export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
-//   try {
-//     const requestUrl = req.url ?? "";
-//     const protocol = req.headers['x-forwarded-proto'] || 'http';
-//     const host = req.headers['host'] || 'localhost:3000';
-
-//     // Construct the base URL using the protocol and host
-//     const baseHref = new URL(`/api/create-actions/find-my-cat`, `${protocol}://${host}`).toString();
-
-//     console.log(`Generated baseHref: ${baseHref}`);
-    
-//     // Define the parameters for the "Find My Cat" game
-//     const actions: LinkedAction[] = [
-//       {
-//         type: 'post',
-//         label: 'Create Game',
-//         href: baseHref,
-//         parameters: [
-//           { name: "title", label: "Game Title", type: "text", required: true },
-//           { name: "maxAttempts", label: "Max Attempts (1-8)", type: "number", min: 1, max: 8, required: true },
-//           { name: "maxTime", label: "Max Time (e.g., 5m = 5 minutes)", type: "text", required: true },
-//           {
-//             name: "currency",
-//             label: "Choose currency",
-//             type: "radio",
-//             options: [
-//               { label: "SOL", value: "SOL" },
-//               { label: "USDC", value: "USDC" },
-//               { label: "BONK", value: "BONK" },
-//             ],
-//           },
-//           { name: "wager", label: "Wager Amount", type: "number", required: true },
-//           { name: "duration", label: "Duration (e.g., 2d = 2 days)", type: "text", required: true },
-//         ],
-//       },
-//     ];
-//     console.log("action is Created")
-//     const payload: ActionGetResponse = await blinksightsClient.createActionGetResponseV1(requestUrl, {
-//       title: `🚀 Create Find My Cat Game`,
-//       icon: `${baseHref}/find-my-cat.jpg`,
-//       type: "action",
-//       description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
-//       label: "Create your game",
-//       links: { actions },
-//     });
-
-//     if (!payload) {
-//       logger.error("Payload construction failed");
-//       return res.status(400).json({ error: "Payload is incorrect" });
-//     }
-//     console.log("Payload is Created")
-
-//     await blinksightsClient.trackRenderV1(requestUrl, payload);
-//     return Response.json(payload, { status: 200, headers: ACTIONS_CORS_HEADERS });
-//   } catch (err) {
-//     logger.error("Error in getHandler: %s", err);
-//     res.status(400).json({ error: "An unknown error occurred" });
-//   }
-// };
-
-
-// GET handler to create the game (show the form for game creation)
-export async function GET(req: Request): Promise<Response> {
+export const GET = async (req: Request) => {
   try {
-    const requestUrl = req.url;
+    logger.info("GET request received");
+
+    /////////////////////////////////////
+    /////////Extract Params//////////////
+    /////////////////////////////////////
+
+    const requestUrl = new URL(req.url);
+    const clusterurl = getRequestParam<CLUSTER_TYPES>(
+      requestUrl,
+      "clusterurl",
+      false,
+    );
+
+    const clusterOptions: ActionParameterSelectable<"radio">[] = clusterurl
+      ? []
+      : [
+        {
+          name: "clusterurl",
+          label: "Select Cluster",
+          type: "radio",
+          required: true,
+          options: [
+            {
+              label: "Devnet",
+              value: CLUSTER_TYPES.DEVNET,
+              selected: true,
+            },
+            {
+              label: "Mainnet",
+              value: CLUSTER_TYPES.MAINNET,
+            },
+          ],
+        },
+      ];
     const protocol = req.headers.get('x-forwarded-proto') || 'http';
     const host = req.headers.get('host') || 'localhost:3000';
 
-    const baseHref = new URL(`/api/actions/create-find-my-cat`, `${protocol}://${host}`).toString();
-    console.log(`Generated baseHref: ${baseHref}`);
+    const href = clusterurl
+      ? `/api/actions/create-find-my-cat?clusterurl=${clusterurl}&name={name}&token={token}&wager={wager}&startTime={startTime}&duration={duration}`
+      : `/api/actions/create-find-my-cat?clusterurl=devnet&name={name}&token={token}&wager={wager}&startTime={startTime}&duration={duration}`;
 
     const actions: LinkedAction[] = [
       {
-        type: 'post',
-        label: 'Create Game',
-        href: baseHref,
+        type: "transaction",
+        label: "Create a FindMyCat", // TODO: edit text here
+        href: new URL(href, `${protocol}://${host}`).toString(),
         parameters: [
-          { name: "title", label: "Game Title", type: "text", required: true },
-          { name: "maxAttempts", label: "Max Attempts (1-8)", type: "number", min: 1, max: 8, required: true },
-          { name: "maxTime", label: "Max Time (e.g., 5m = 5 minutes)", type: "text", required: true },
+          ...clusterOptions,
           {
-            name: "currency",
-            label: "Choose currency",
+            name: "name",
+            label: "Find My Cat",
+            required: true,
+          },
+          {
+            name: "token",
+            label: "Choose token",
             type: "radio",
+            required: true,
             options: [
-              { label: "SOL", value: "SOL" },
-              { label: "USDC", value: "USDC" },
-              { label: "BONK", value: "BONK" },
+              {
+                label: VERIFIED_CURRENCY.SOL,
+                value: VERIFIED_CURRENCY.SOL,
+                selected: true,
+              },
+              {
+                label: VERIFIED_CURRENCY.USDC,
+                value: VERIFIED_CURRENCY.USDC,
+              },
+              {
+                label: VERIFIED_CURRENCY.BONK,
+                value: VERIFIED_CURRENCY.BONK,
+              },
             ],
           },
-          { name: "wager", label: "Wager Amount", type: "number", required: true },
-          { name: "duration", label: "Duration (e.g., 2d = 2 days)", type: "text", required: true },
+          {
+            name: "wager",
+            label: "Set wager amount",
+            required: true,
+          },
+          {
+            name: "startTime",
+            label: "Starting time of the challenge. eg: 5m, 1h, 2d...",
+            required: true,
+          },
+          {
+            name: "duration",
+            label: "Duration of the challenge. eg: 5m, 1h, 2d...",
+            required: true,
+          },
         ],
       },
     ];
 
-    const payload: ActionGetResponse = {
-      title: `🚀 Create Find My Cat Game`,
-      icon: new URL(
-        "/find-my-cat.jpg",
-        new URL(requestUrl).origin
-      ).toString(),
+    const basicUrl =
+      process.env.IS_PROD === "prod"
+        ? "https://join.catoff.xyz" // TODO: edit url here
+        : new URL(req.url).origin;
+
+    const icons = {
+      name: new URL("/find-my-cat.jpg", basicUrl).toString(), // TODO: edit link here
+    };
+
+    let payload: ActionGetResponse;
+
+    payload = {
+      title: `🚀 Create Find My Cat Game`, // TODO: edit text here
+      icon: icons.name,
       type: "action",
-      description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
-      label: "Create your game",
+      description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`, // TODO: edit text here
+      label: "Create",
       links: { actions },
     };
-
-    const headers = new Headers({
-      "Content-Type": "application/json",
-      ...ACTIONS_CORS_HEADERS,
-    });
-
-    return new Response(JSON.stringify(payload), { status: 200, headers });
+    logger.info("Payload constructed successfully: %o", payload);
+    return jsonResponse(payload, StatusCodes.OK, headers);
   } catch (err) {
-    logger.error("Error in GET handler: %s", err);
-    return new Response(JSON.stringify({ error: "An unknown error occurred" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    logger.error("An error occurred in GET handler: %s", err);
+    let actionError: ActionError = { message: "An unknown error occurred" };
+    if (typeof err === "string") actionError.message = err;
+    return jsonResponse(actionError, StatusCodes.BAD_REQUEST, headers);
   }
-}
+};
 
+// DO NOT FORGET TO INCLUDE THE `OPTIONS` HTTP METHOD
+// THIS WILL ENSURE CORS WORKS FOR BLINKS
+export const OPTIONS = async () => Response.json(null, { headers });
 
-export const OPTIONS = GET
-
-// POST handler to process game creation and perform the on-chain transaction
-export async function POST(req: Request): Promise<Response> {
+export const POST = async (req: Request) => {
   try {
-    const { account, data } = await req.json();
-    const { title, maxAttempts, maxTime, currency, wager, duration } = data || {};
+    /////////////////////////////////////
+    /////////Extract Params//////////////
+    /////////////////////////////////////
 
-    if (!account || !title || !maxAttempts || !maxTime || !currency || !wager || !duration) {
-      return new Response(JSON.stringify({ error: "Missing required parameters" }), {
-        status: 400,
-        headers: ACTIONS_CORS_HEADERS,
-      });
-    }
+    const requestUrl = new URL(req.url);
+    logger.info("POST request received for FindMyCat");
 
-    let accountPublicKey: PublicKey;
-    try {
-      accountPublicKey = new PublicKey(account);
-    } catch (err) {
-      return new Response("Invalid 'account' provided", {
-        status: 400,
-        headers: ACTIONS_CORS_HEADERS,
-      });
-    }
-
-    const gameDetails: CreateFindMyCatGameDto = {
-      creatorAddress: accountPublicKey.toString(),
-      gameTitle: title,
-      maxAttempts: Number(maxAttempts),
-      maxTime: parseDuration(maxTime),
-      currency,
-      wagerAmount: Number(wager),
-      startDate: Date.now(),
-      endDate: Date.now() + parseDuration(duration),
-    };
-
-    await createFindMyCatGame(gameDetails);
-
-    const { connection } = await initWeb3();
-    const transaction = new web3.Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: accountPublicKey,
-        toPubkey: accountPublicKey,
-        lamports: 1000,
-      })
+    // Validate and retrieve parameters with logging
+    const clusterurl = getRequestParam<CLUSTER_TYPES>(
+      requestUrl,
+      "clusterurl",
+      false,
+      Object.values(CLUSTER_TYPES),
+      CLUSTER_TYPES.DEVNET,
     );
+    const name = getRequestParam<string>(requestUrl, "name", true);
+    const token = getRequestParam<VERIFIED_CURRENCY>(
+      requestUrl,
+      "token",
+      true,
+      Object.values(VERIFIED_CURRENCY),
+      VERIFIED_CURRENCY.SOL,
+    );
+    const wager = getRequestParam<number>(requestUrl, "wager", true);
+    validateParameters("wager", wager > 0, "Wager must be greater than zero");
+
+    const startTimeStr = getRequestParam<string>(requestUrl, "startTime", true);
+    const durationStr = getRequestParam<string>(requestUrl, "duration", true);
+    const { startDate, endDate } = calculateTimeRange(startTimeStr, durationStr);
+
+    /////////////////////////////////////
+    /////////Extract Account/////////////
+    /////////////////////////////////////
+
+    // Retrieve request body and validate account
+    const body: ActionPostRequest = await req.json();
+    let account: PublicKey;
+    try {
+      account = new PublicKey(body.account);
+      logger.info(`Account PublicKey validated: ${account.toString()}`);
+    } catch (err) {
+      logger.error(`Invalid account public key: ${body.account}`);
+      throw new GenericError("Invalid account public key", StatusCodes.BAD_REQUEST);
+    }
+
+    /////////////////////////////////////
+    ///////////Parse Phase///////////////
+    /////////////////////////////////////
+
+    /////////////////////////////////////
+    /////////Transaction Phase///////////
+    /////////////////////////////////////
+
+    const { connection } = await initWeb3(clusterurl);
+
+    const recipientAddr = ONCHAIN_CONFIG[clusterurl].treasuryWallet;
+    const recipientPublicKey = new PublicKey(recipientAddr);
+    const createTx: ICreateTransaction = {
+      accountPublicKey: account,
+      recipientPublicKey,
+      currency: VERIFIED_CURRENCY.SOL,
+      amount: 0.000000001,
+      connection,
+      cluster: clusterurl,
+    };
+    const tx = await createTransaction(createTx);
 
     const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = accountPublicKey;
+    logger.info("Blockhash: %s", blockhash);
 
-    const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
-    const base64Transaction = serializedTransaction.toString("base64");
-    console.log("Base64 Transaction:", base64Transaction);
+    // Create the transaction and set the user as the payer
+    const transaction = new web3.Transaction({
+      recentBlockhash: blockhash,
+      feePayer: account, // User's wallet pays the fee
+    }).add(...tx);
+
+    const href = `/api/actions/find-my-cat/next-action?clusterurl=${clusterurl}&name=${name}&token=${token}&wager=${wager}&startDate=${startDate}&endDate=${endDate}`; // TODO: edit next action link here
+    logger.info(`Sending next action for create challenge blinks at: ${href}`);
+
+    // Create response payload
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
-        transaction,
         type: "transaction",
-        message: "Game created successfully!",
+        transaction,
+        message: "Create Catoff FindMyCat", // TODO: edit text here
+        links: {
+          next: {
+            type: "post",
+            href,
+          },
+        },
       },
     });
+    logger.info("Response payload created successfully");
 
-    return new Response(JSON.stringify(payload), {
-      status: 200,
-      headers: ACTIONS_CORS_HEADERS,
-    });
+    return jsonResponse(payload, StatusCodes.OK, headers);
   } catch (err) {
-    logger.error("Error in POST handler: %s", err);
-    return new Response(JSON.stringify({ error: "An unknown error occurred" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
+    logger.error("An error occurred in POST handler:", err);
+    let actionError: ActionError = { message: "An unknown error occurred" };
+    if (typeof err === "string") actionError.message = err;
+    else if (err instanceof GenericError) actionError.message = err.message;
 
-// Helper function to parse duration (e.g., "5h" = 5 hours)
-const parseDuration = (duration: string): number => {
-  const timeUnit = duration.slice(-1);
-  const timeValue = parseInt(duration.slice(0, -1));
-
-  switch (timeUnit) {
-    case 'h': return timeValue * 60 * 60 * 1000;  // hours to milliseconds
-    case 'm': return timeValue * 60 * 1000;      // minutes to milliseconds
-    case 's': return timeValue * 1000;           // seconds to milliseconds
-    case 'd': return timeValue * 24 * 60 * 60 * 1000;  // days to milliseconds`
-    default: throw new Error("Invalid duration format");
+    return jsonResponse(actionError, StatusCodes.BAD_REQUEST, headers);
   }
 };

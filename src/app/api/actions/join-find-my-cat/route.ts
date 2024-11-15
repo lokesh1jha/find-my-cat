@@ -20,7 +20,7 @@ import { ONCHAIN_CONFIG } from "../../common/helper/cluster.helper";
 import { getFindMyCatById } from "../../../../../utils/api.util";
 import { jsonResponse, Promisify } from "../../common/helper/responseMaker";
 import { StatusCodes } from "http-status-codes";
-import { GenericError } from "../../common/helper/error";
+import { GenericError } from "../../../../../utils/error";
 import { getTxObject, initWeb3, parseToPrecision, tokenAccounts } from "../../common/helper/helper";
 import logger from "../../common/logger";
 
