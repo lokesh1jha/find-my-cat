@@ -149,7 +149,7 @@ export async function POST(req: Request): Promise<Response> {
 
     if(actionId) {
       // will redirect to game as the game is created
-      return Response.redirect(new URL(`/api/actions/join-find-my-cat?clusterurl=${process.env.NETWORK}&actionId=${actionId}`, new URL(req.url).origin).toString(), 301)
+      // return Response.redirect(new URL(`/game/play-game?clusterurl=${process.env.NETWORK}&actionId=${actionId}`, new URL(req.url).origin).toString(), 301)
     }
     const { title, maxAttempts, maxTime, currency, wager, duration } = data || {};
 
@@ -181,6 +181,7 @@ export async function POST(req: Request): Promise<Response> {
       endDate: Date.now() + parseDuration(duration),
     };
 
+    // insert in db
     await createFindMyCatGame(gameDetails);
 
     const { connection } = await initWeb3();
