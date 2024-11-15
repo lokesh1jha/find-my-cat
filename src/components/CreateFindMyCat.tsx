@@ -53,7 +53,7 @@ export default function CreateFindMyCatGame() {
   useEffect(() => {
     if (gameData?.links.actions[0]?.href) {
       const href = gameData.links.actions[0].href;
-      const dialectUrl = `https://dial.to/?action=solana-action:${encodeURIComponent(href)}&cluster=mainnet`;
+      const dialectUrl = `https://dial.to/?action=solana-action:${encodeURIComponent(href)}&cluster=${process.env.NETWORK}`;
       console.log(`Redirecting to: ${dialectUrl}`);
 
       window.location.href = dialectUrl;

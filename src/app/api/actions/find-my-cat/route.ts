@@ -11,18 +11,79 @@ const BLINKS_INSIGHT_API_KEY = process.env.BLINKS_INSIGHT_API_KEY;
 const blinksightsClient = new BlinksightsClient(BLINKS_INSIGHT_API_KEY!);
 
 // GET handler to create the game (show the form for game creation)
-// export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
+export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    const requestUrl = req.url ?? "";
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers['host'] || 'localhost:3000';
+
+    // Construct the base URL using the protocol and host
+    const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
+
+    console.log(`Generated baseHref: ${baseHref}`);
+
+    // Define the parameters for the "Find My Cat" game
+    const actions: LinkedAction[] = [
+      {
+        type: 'post',
+        label: 'Create Game',
+        href: baseHref,
+        parameters: [
+          { name: "title", label: "Game Title", type: "text", required: true },
+          { name: "maxAttempts", label: "Max Attempts (1-8)", type: "number", min: 1, max: 8, required: true },
+          { name: "maxTime", label: "Max Time (e.g., 5m = 5 minutes)", type: "text", required: true },
+          {
+            name: "currency",
+            label: "Choose currency",
+            type: "radio",
+            options: [
+              { label: "SOL", value: "SOL", selected: true },
+              { label: "USDC", value: "USDC" },
+              { label: "BONK", value: "BONK" },
+            ],
+          },
+          { name: "wager", label: "Wager Amount", type: "number", required: true },
+          { name: "duration", label: "Duration (e.g., 2d = 2 days)", type: "text", required: true },
+        ],
+      },
+    ];
+    console.log("action is Created", " requestUrl", requestUrl)
+    const payload: ActionGetResponse = await blinksightsClient.createActionGetResponseV1(requestUrl, {
+      title: `🚀 Create Find My Cat Game`,
+      icon: new URL("/find-my-cat.jpg",
+        new URL(requestUrl).origin
+      ).toString(),
+      type: "action",
+      description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
+      label: "Create your game",
+      links: { actions },
+    });
+
+    if (!payload) {
+      logger.error("Payload construction failed");
+      return res.status(400).json({ error: "Payload is incorrect" });
+    }
+    console.log("Payload is Created")
+
+    await blinksightsClient.trackRenderV1(requestUrl, payload);
+    return Response.json(payload, { status: 200, headers: ACTIONS_CORS_HEADERS });
+  } catch (err) {
+    logger.error("Error in getHandler: %s", err);
+    res.status(400).json({ error: "An unknown error occurred" });
+  }
+};
+
+
+// GET handler to create the game (show the form for game creation)
+// export async function GET(req: Request): Promise<Response> {
 //   try {
-//     const requestUrl = req.url ?? "";
-//     const protocol = req.headers['x-forwarded-proto'] || 'http';
-//     const host = req.headers['host'] || 'localhost:3000';
+//     const requestUrl = req.url;
+//     const protocol = req.headers.get('x-forwarded-proto') || 'http';
+//     const host = req.headers.get('host') || 'localhost:3000';
 
-//     // Construct the base URL using the protocol and host
 //     const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
-
 //     console.log(`Generated baseHref: ${baseHref}`);
-    
-//     // Define the parameters for the "Find My Cat" game
+
 //     const actions: LinkedAction[] = [
 //       {
 //         type: 'post',
@@ -47,92 +108,33 @@ const blinksightsClient = new BlinksightsClient(BLINKS_INSIGHT_API_KEY!);
 //         ],
 //       },
 //     ];
-//     console.log("action is Created")
-//     const payload: ActionGetResponse = await blinksightsClient.createActionGetResponseV1(requestUrl, {
+
+//     const payload: ActionGetResponse = {
 //       title: `🚀 Create Find My Cat Game`,
-//       icon: `${baseHref}/find-my-cat.jpg`,
+//       icon: new URL(
+//         "/find-my-cat.jpg",
+//         new URL(requestUrl).origin
+//       ).toString(),
 //       type: "action",
 //       description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
 //       label: "Create your game",
 //       links: { actions },
+//     };
+
+//     const headers = new Headers({
+//       "Content-Type": "application/json",
+//       ...ACTIONS_CORS_HEADERS,
 //     });
 
-//     if (!payload) {
-//       logger.error("Payload construction failed");
-//       return res.status(400).json({ error: "Payload is incorrect" });
-//     }
-//     console.log("Payload is Created")
-
-//     await blinksightsClient.trackRenderV1(requestUrl, payload);
-//     return Response.json(payload, { status: 200, headers: ACTIONS_CORS_HEADERS });
+//     return new Response(JSON.stringify(payload), { status: 200, headers });
 //   } catch (err) {
-//     logger.error("Error in getHandler: %s", err);
-//     res.status(400).json({ error: "An unknown error occurred" });
+//     logger.error("Error in GET handler: %s", err);
+//     return new Response(JSON.stringify({ error: "An unknown error occurred" }), {
+//       status: 500,
+//       headers: { "Content-Type": "application/json" },
+//     });
 //   }
-// };
-
-
-// GET handler to create the game (show the form for game creation)
-export async function GET(req: Request): Promise<Response> {
-  try {
-    const requestUrl = req.url;
-    const protocol = req.headers.get('x-forwarded-proto') || 'http';
-    const host = req.headers.get('host') || 'localhost:3000';
-
-    const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
-    console.log(`Generated baseHref: ${baseHref}`);
-
-    const actions: LinkedAction[] = [
-      {
-        type: 'post',
-        label: 'Create Game',
-        href: baseHref,
-        parameters: [
-          { name: "title", label: "Game Title", type: "text", required: true },
-          { name: "maxAttempts", label: "Max Attempts (1-8)", type: "number", min: 1, max: 8, required: true },
-          { name: "maxTime", label: "Max Time (e.g., 5m = 5 minutes)", type: "text", required: true },
-          {
-            name: "currency",
-            label: "Choose currency",
-            type: "radio",
-            options: [
-              { label: "SOL", value: "SOL" },
-              { label: "USDC", value: "USDC" },
-              { label: "BONK", value: "BONK" },
-            ],
-          },
-          { name: "wager", label: "Wager Amount", type: "number", required: true },
-          { name: "duration", label: "Duration (e.g., 2d = 2 days)", type: "text", required: true },
-        ],
-      },
-    ];
-
-    const payload: ActionGetResponse = {
-      title: `🚀 Create Find My Cat Game`,
-      icon: new URL(
-        "/find-my-cat.jpg",
-        new URL(requestUrl).origin
-      ).toString(),
-      type: "action",
-      description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
-      label: "Create your game",
-      links: { actions },
-    };
-
-    const headers = new Headers({
-      "Content-Type": "application/json",
-      ...ACTIONS_CORS_HEADERS,
-    });
-
-    return new Response(JSON.stringify(payload), { status: 200, headers });
-  } catch (err) {
-    logger.error("Error in GET handler: %s", err);
-    return new Response(JSON.stringify({ error: "An unknown error occurred" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
+// }
 
 
 export const OPTIONS = GET
@@ -141,6 +143,14 @@ export const OPTIONS = GET
 export async function POST(req: Request): Promise<Response> {
   try {
     const { account, data } = await req.json();
+
+    let actionId = new URL(req.url).searchParams.get("actionId");
+    console.log(`Received POST request for actionId: ${actionId}`);
+
+    if(actionId) {
+      // will redirect to game as the game is created
+      return Response.redirect(new URL(`/api/actions/join-find-my-cat?clusterurl=${process.env.NETWORK}&actionId=${actionId}`, new URL(req.url).origin).toString(), 301)
+    }
     const { title, maxAttempts, maxTime, currency, wager, duration } = data || {};
 
     if (!account || !title || !maxAttempts || !maxTime || !currency || !wager || !duration) {
