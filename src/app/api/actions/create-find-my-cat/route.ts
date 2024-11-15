@@ -207,7 +207,8 @@ export const POST = async (req: Request) => {
     /////////Transaction Phase///////////
     /////////////////////////////////////
 
-    const { connection } = await initWeb3(clusterurl);
+    // const { connection } = await initWeb3(clusterurl);
+    const connection = new web3.Connection("https://devnet.helius-rpc.com/?api-key=3696f439-e2b1-4cbe-bd38-d70ebc839cee", "confirmed");
 
     const recipientAddr = ONCHAIN_CONFIG[clusterurl].treasuryWallet;
     const recipientPublicKey = new PublicKey(recipientAddr);
@@ -230,7 +231,7 @@ export const POST = async (req: Request) => {
       feePayer: account, // User's wallet pays the fee
     }).add(...tx);
 
-    const href = `/api/actions/find-my-cat/next-action?clusterurl=${clusterurl}&name=${name}&token=${token}&wager=${wager}&startDate=${startDate}&endDate=${endDate}`; // TODO: edit next action link here
+    const href = `/api/actions/create-find-my-cat/next-action?clusterurl=${clusterurl}&name=${name}&token=${token}&wager=${wager}&startDate=${startDate}&endDate=${endDate}`; // TODO: edit next action link here
     logger.info(`Sending next action for create challenge blinks at: ${href}`);
 
     // Create response payload
