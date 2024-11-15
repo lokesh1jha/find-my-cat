@@ -1,4 +1,4 @@
-import { GenericError } from "./error";
+import { GenericError } from "../../../../../utils/error";
 import logger from "../logger";
 import { StatusCodes } from "http-status-codes";
 

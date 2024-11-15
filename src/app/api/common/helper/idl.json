@@ -1,6 +1,12 @@
 {
   "version": "0.1.0",
   "name": "multi_token",
+  "address": "CATfsBsU5KLkpug5BzLK3j94Wm7mtCmdss14r4gWdbZz",
+  "metadata": {
+    "version": "0.1.0",
+    "name": "multi_token",
+    "spec": "legacy-transaction"
+  },
   "instructions": [
     {
       "name": "initializeEscrow",

@@ -1,4 +1,4 @@
-import { GenericError } from "./error";
+import { GenericError } from "../../../../../utils/error";
 
 const parseRelativeTime = (time: string): number => {
   const timeSegments = time.split(/[\s&-]/); // Split on whitespace, `&`, or `-`

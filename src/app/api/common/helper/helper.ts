@@ -1,12 +1,11 @@
 import { AnchorProvider, BN, Idl, Program, Wallet, web3 } from "@coral-xyz/anchor";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as idl from "./idl.json";
-import * as base58 from "bs58";
 import { ONCHAIN_CONFIG } from "./cluster.helper";
 import { IGetTxObject, ITokenAccountGetter, ResultWithError, VERIFIED_CURRENCY } from "../types";
 import BigNumber from "bignumber.js";
 import logger from "../logger";
-import { GenericError } from "./error";
+import { GenericError } from "../../../../../utils/error";
 import { StatusCodes } from "http-status-codes";
 
 export const getAssociatedTokenAccount = async (
@@ -53,8 +52,13 @@ export const initWeb3 = async (
     const provider = new AnchorProvider(connection, {} as any, {
       preflightCommitment: "processed",
     });
-    const program = new Program(idl as Idl, creds.progId, provider);
+    console.log(creds.nodeURL, creds.progId);
+
+    const programId = new web3.PublicKey(creds.progId);
+
+    const program = new Program(idl as unknown as Idl, provider);
     logger.info(`[initWeb3] Initialized program with ID: ${creds.progId}`);
+
     return { program, connection };
   } catch (error) {
     logger.error(`[initWeb3] Error initializing web3: ${error}`);
