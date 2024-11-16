@@ -19,11 +19,11 @@ enum CLUSTER_TYPES {
 export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
     const requestUrl = req.url ?? "";
-    const clusterurl = new URL(requestUrl).searchParams.get("clusterurl") || "";
+    const clusterurl = new URL(requestUrl).searchParams.get("cluster") || "";
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers['host'] || 'localhost:3000';
 
-
+    logger.info("GET request received clusterurl: %s", clusterurl);
     const clusterOptions: ActionParameterSelectable<"radio">[] = clusterurl
     ? []
     : [
@@ -45,6 +45,8 @@ export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
         ],
       },
     ];
+
+    logger.info("Generated clusterOptions: %o", clusterOptions);
     // Construct the base URL using the protocol and host
     const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
 
@@ -82,7 +84,6 @@ export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
       icon: new URL("/find-my-cat.jpg",
         new URL(requestUrl).origin
       ).toString(),
-      type: "action",
       description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
       label: "Create your game",
       links: { actions },
@@ -95,7 +96,10 @@ export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
     console.log("Payload is Created")
 
     await blinksightsClient.trackRenderV1(requestUrl, payload);
-    return Response.json(payload, { status: 200, headers: ACTIONS_CORS_HEADERS });
+    return Response.json(payload, { status: 200, headers: {
+            "Content-Type": "application/json",
+            ...ACTIONS_CORS_HEADERS,
+          } });
   } catch (err) {
     logger.error("Error in getHandler: %s", err);
     res.status(400).json({ error: "An unknown error occurred" });
@@ -229,11 +233,13 @@ export async function POST(req: Request): Promise<Response> {
     const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
     const base64Transaction = serializedTransaction.toString("base64");
     console.log("Base64 Transaction:", base64Transaction);
+
+    const gameLink = new URL(`/game/play-game?clusterurl=${process.env.NETWORK}&actionId=${actionId}`, new URL(req.url).origin).toString();
     const payload: ActionPostResponse = await createPostResponse({
       fields: {
         transaction,
         type: "transaction",
-        message: "Game created successfully!",
+        message: `Game created successfully! Share this link to invite others: ${gameLink}`,
       },
     });
 

@@ -5,7 +5,9 @@ import prisma from "../../../../../utils/db";
 
 // Initialize the connection to Solana blockchain
 export const initWeb3 = async (): Promise<{ connection: Connection }> => {
-  const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+  const connection = new Connection("https://devnet.helius-rpc.com/?api-key=3696f439-e2b1-4cbe-bd38-d70ebc839cee", "confirmed");
+
+  // const connection = new Connection("https://api.devnet.solana.com", "confirmed");
   return { connection };
 };
 

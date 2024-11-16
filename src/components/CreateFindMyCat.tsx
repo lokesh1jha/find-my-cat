@@ -29,7 +29,8 @@ type GameResponse = {
   };
 };
 
-export default function CreateFindMyCatGame() {
+export default function CreateFindMyCatGame({params}: any) {
+  let { actionId , clusterurl} = params;
   const [gameData, setGameData] = useState<GameResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
