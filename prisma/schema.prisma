@@ -17,6 +17,7 @@ model game {
   max_time        Int?
   start_date      BigInt?
   end_date        BigInt?
+  actionId        String?
   responses       responses[]
 }
 
