@@ -2,7 +2,7 @@
 
 A simple game where players need to find the hidden cat on the board within a limited number of attempts. The player who finds the cat in the fewest moves wins! In case of a tie, the fastest time will be used as the tiebreaker.
 
-## 🚀 Features 
+## 🚀 Features
 - Fun and interactive game where players search for a hidden cat.
 - Clean and modern user interface using Tailwind CSS.
 - Integration with Solana wallet for tracking player scores and rewards.
