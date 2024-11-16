@@ -1,6 +1,7 @@
 import { ActionGetResponse, ActionParameterSelectable, ActionPostResponse, ACTIONS_CORS_HEADERS, createPostResponse, LinkedAction } from "@solana/actions";
 import * as web3 from "@solana/web3.js";
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from 'next/server';
+import { URL } from 'url';
 import { initWeb3, createFindMyCatGame } from "./helper";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { BlinksightsClient } from "blinksights-sdk";
@@ -16,40 +17,36 @@ enum CLUSTER_TYPES {
 }
 
 // GET handler to create the game (show the form for game creation)
-export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
+export const GET = async (req: Request) => {
   try {
-    const requestUrl = req.url ?? "";
+    // Extract URL and headers from the Request object
+    const requestUrl = req.url;
     const clusterurl = new URL(requestUrl).searchParams.get("cluster") || "";
-    const protocol = req.headers['x-forwarded-proto'] || 'http';
-    const host = req.headers['host'] || 'localhost:3000';
+    const protocol = req.headers.get('x-forwarded-proto') || 'http';
+    const host = req.headers.get('host') || 'localhost:3000';
 
     logger.info("GET request received clusterurl: %s", clusterurl);
+
+    // Define cluster options based on the clusterurl parameter
     const clusterOptions: ActionParameterSelectable<"radio">[] = clusterurl
-    ? []
-    : [
-      {
-        name: "clusterurl",
-        label: "Select Cluster",
-        type: "radio",
-        required: true,
-        options: [
-          {
-            label: "Devnet",
-            value: CLUSTER_TYPES.DEVNET,
-            selected: true,
-          },
-          {
-            label: "Mainnet",
-            value: CLUSTER_TYPES.MAINNET,
-          },
-        ],
-      },
-    ];
+      ? []
+      : [
+        {
+          name: "clusterurl",
+          label: "Select Cluster",
+          type: "radio",
+          required: true,
+          options: [
+            { label: "Devnet", value: CLUSTER_TYPES.DEVNET, selected: true },
+            { label: "Mainnet", value: CLUSTER_TYPES.MAINNET },
+          ],
+        },
+      ];
 
     logger.info("Generated clusterOptions: %o", clusterOptions);
+
     // Construct the base URL using the protocol and host
     const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
-
     console.log(`Generated baseHref: ${baseHref}`);
 
     // Define the parameters for the "Find My Cat" game
@@ -78,12 +75,13 @@ export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
         ],
       },
     ];
-    console.log("action is Created", " requestUrl", requestUrl)
+
+    console.log("Action created", "requestUrl", requestUrl);
+
+    // Create the payload using your client (assuming `blinksightsClient` is properly defined)
     const payload: ActionGetResponse = await blinksightsClient.createActionGetResponseV1(requestUrl, {
       title: `🚀 Create Find My Cat Game`,
-      icon: new URL("/find-my-cat.jpg",
-        new URL(requestUrl).origin
-      ).toString(),
+      icon: new URL("/find-my-cat.jpg", requestUrl).toString(),
       description: `Set up your own 'Find My Cat' game! Choose max attempts, time limit, and wager amount.`,
       label: "Create your game",
       links: { actions },
@@ -91,18 +89,22 @@ export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
 
     if (!payload) {
       logger.error("Payload construction failed");
-      return res.status(400).json({ error: "Payload is incorrect" });
+      return NextResponse.json({ error: "Payload is incorrect" }, { status: 400 });
     }
-    console.log("Payload is Created")
+    console.log("Payload created");
 
     await blinksightsClient.trackRenderV1(requestUrl, payload);
-    return Response.json(payload, { status: 200, headers: {
-            "Content-Type": "application/json",
-            ...ACTIONS_CORS_HEADERS,
-          } });
+
+    return NextResponse.json(payload, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...ACTIONS_CORS_HEADERS,
+      },
+    });
   } catch (err) {
-    logger.error("Error in getHandler: %s", err);
-    res.status(400).json({ error: "An unknown error occurred" });
+    logger.error("Error in GET handler: %s", err);
+    return NextResponse.json({ error: "An unknown error occurred" }, { status: 400 });
   }
 };
 
