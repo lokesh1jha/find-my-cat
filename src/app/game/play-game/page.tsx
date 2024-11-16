@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { X, Award } from 'lucide-react'
 import Header from '@/app/components/Header'
+import { useWallet } from '@solana/wallet-adapter-react'
 
 const GRID_SIZE = 5
 const MAX_ATTEMPTS = 10
@@ -12,7 +13,7 @@ const GAME_DURATION = 60 // seconds
 export default function FindTheCat({
   params,
 }: {
-  params: { actionId: string };
+  params: { actionId: string , clusterurl: string};
 }) {
   const [catPosition, setCatPosition] = useState<number>()
   const [attempts, setAttempts] = useState(MAX_ATTEMPTS)
@@ -20,6 +21,8 @@ export default function FindTheCat({
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing')
   const [clickedTiles, setClickedTiles] = useState<Set<number>>(new Set())
   const [showPopup, setShowPopup] = useState(false)
+
+  let { publicKey } = useWallet()
 
   useEffect(() => {
 
@@ -62,6 +65,39 @@ export default function FindTheCat({
       setGameStatus('lost')
       setShowPopup(true)
     }
+  } 
+
+  const submitResult = () => {
+    console.log('Submitted result:', attempts, timeLeft, clickedTiles, catPosition, publicKey, gameStatus)
+    // make attempt from string to json
+    let responseJson: {[key: number]: number} = {}
+    for(let i = 0; i < clickedTiles.size; i++) {
+      responseJson[i] = Array.from(clickedTiles)[i]
+    }
+    
+    let body = {
+      attempts: attempts,
+      timeLeft: timeLeft,
+      clickedTiles: responseJson,
+      catPosition: catPosition,
+      publicKey: publicKey?.toString(),
+      gameStatus: gameStatus
+    }
+
+    fetch('/api/actions//submit-response', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+    .then(response => {
+      let data = response.json()
+      console.log("Response ------------", data)
+      return data
+    })
+    .then(data => console.log(data))
+    // resetGame()
   }
 
   const getProximity = (index: number) => {
@@ -152,9 +188,9 @@ export default function FindTheCat({
                 </button>
                 <button
                   className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-300"
-                  onClick={() => alert('Share functionality coming soon!')}
+                  onClick={() => submitResult()}
                 >
-                  Share Result
+                  Submit Result
                 </button>
               </div>
             </div>

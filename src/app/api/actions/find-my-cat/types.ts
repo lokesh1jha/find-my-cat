@@ -17,6 +17,7 @@ export interface CreateFindMyCatGameDto {
   maxTime: number; // Maximum time in seconds
   startDate: number;
   endDate: number;
+  actionId?: string;
 }
 
 // Store player responses for the "Find My Cat" game

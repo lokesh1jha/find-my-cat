@@ -212,6 +212,7 @@ export async function POST(req: Request): Promise<Response> {
       wagerAmount: Number(wager),
       startDate: Date.now(),
       endDate: Date.now() + parseDuration(duration),
+      actionId: actionId || "",
     };
 
     // insert in db
