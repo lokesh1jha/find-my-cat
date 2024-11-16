@@ -1,4 +1,4 @@
-import { ActionGetResponse, ActionPostResponse, ACTIONS_CORS_HEADERS, createPostResponse, LinkedAction } from "@solana/actions";
+import { ActionGetResponse, ActionParameterSelectable, ActionPostResponse, ACTIONS_CORS_HEADERS, createPostResponse, LinkedAction } from "@solana/actions";
 import * as web3 from "@solana/web3.js";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { initWeb3, createFindMyCatGame } from "./helper";
@@ -10,13 +10,41 @@ import { CreateFindMyCatGameDto } from "./types";
 const BLINKS_INSIGHT_API_KEY = process.env.BLINKS_INSIGHT_API_KEY;
 const blinksightsClient = new BlinksightsClient(BLINKS_INSIGHT_API_KEY!);
 
+enum CLUSTER_TYPES {
+  DEVNET = "devnet",
+  MAINNET = "mainnet",
+}
+
 // GET handler to create the game (show the form for game creation)
 export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
     const requestUrl = req.url ?? "";
+    const clusterurl = new URL(requestUrl).searchParams.get("clusterurl") || "";
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers['host'] || 'localhost:3000';
 
+
+    const clusterOptions: ActionParameterSelectable<"radio">[] = clusterurl
+    ? []
+    : [
+      {
+        name: "clusterurl",
+        label: "Select Cluster",
+        type: "radio",
+        required: true,
+        options: [
+          {
+            label: "Devnet",
+            value: CLUSTER_TYPES.DEVNET,
+            selected: true,
+          },
+          {
+            label: "Mainnet",
+            value: CLUSTER_TYPES.MAINNET,
+          },
+        ],
+      },
+    ];
     // Construct the base URL using the protocol and host
     const baseHref = new URL(`/api/actions/find-my-cat`, `${protocol}://${host}`).toString();
 
@@ -29,6 +57,7 @@ export const GET = async (req: NextApiRequest, res: NextApiResponse) => {
         label: 'Create Game',
         href: baseHref,
         parameters: [
+          ...clusterOptions,
           { name: "title", label: "Game Title", type: "text", required: true },
           { name: "maxAttempts", label: "Max Attempts (1-8)", type: "number", min: 1, max: 8, required: true },
           { name: "maxTime", label: "Max Time (e.g., 5m = 5 minutes)", type: "text", required: true },
