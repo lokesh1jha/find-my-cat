@@ -29,8 +29,7 @@ type GameResponse = {
   };
 };
 
-export default function CreateFindMyCatGame({params}: any) {
-  let { actionId , clusterurl} = params;
+export default function CreateFindMyCatGame() {
   const [gameData, setGameData] = useState<GameResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -54,7 +53,7 @@ export default function CreateFindMyCatGame({params}: any) {
   useEffect(() => {
     if (gameData?.links.actions[0]?.href) {
       const href = gameData.links.actions[0].href;
-      const dialectUrl = `https://dial.to/?action=solana-action:${encodeURIComponent(href)}&cluster=${process.env.NETWORK}`;
+      const dialectUrl = `https://dial.to/?action=solana-action:${encodeURIComponent(href)}&cluster=devnet`;
       console.log(`Redirecting to: ${dialectUrl}`);
 
       window.location.href = dialectUrl;

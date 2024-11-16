@@ -24,6 +24,7 @@ export const createFindMyCatGame = async (gameDetails: CreateFindMyCatGameDto): 
     max_time: gameDetails.maxTime,
     start_date: gameDetails.startDate,
     end_date: gameDetails.endDate,
+    actionId: gameDetails.actionId
   };
 
   try {

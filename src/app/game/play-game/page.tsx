@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { X, Award } from 'lucide-react'
 import Header from '@/app/components/Header'
 import { useWallet } from '@solana/wallet-adapter-react'
+import { toast } from 'sonner'
 
 const GRID_SIZE = 5
 const MAX_ATTEMPTS = 10
@@ -13,7 +14,7 @@ const GAME_DURATION = 60 // seconds
 export default function FindTheCat({
   params,
 }: {
-  params: { actionId: string , clusterurl: string};
+  params: { actionId: string, clusterurl: string };
 }) {
   const [catPosition, setCatPosition] = useState<number>()
   const [attempts, setAttempts] = useState(MAX_ATTEMPTS)
@@ -65,38 +66,39 @@ export default function FindTheCat({
       setGameStatus('lost')
       setShowPopup(true)
     }
-  } 
+  }
 
   const submitResult = () => {
     console.log('Submitted result:', attempts, timeLeft, clickedTiles, catPosition, publicKey, gameStatus)
     // make attempt from string to json
-    let responseJson: {[key: number]: number} = {}
-    for(let i = 0; i < clickedTiles.size; i++) {
+    let responseJson: { [key: number]: number } = {}
+    for (let i = 0; i < clickedTiles.size; i++) {
       responseJson[i] = Array.from(clickedTiles)[i]
     }
-    
-    let body = {
-      attempts: attempts,
-      timeLeft: timeLeft,
-      clickedTiles: responseJson,
-      catPosition: catPosition,
-      publicKey: publicKey?.toString(),
-      gameStatus: gameStatus
-    }
 
-    fetch('/api/actions//submit-response', {
+    let body = {
+      account: publicKey?.toString(),
+      selected_cells: responseJson,
+      completion_time: 60 - timeLeft,
+      attempts_used: attempts,
+      is_cat_found: gameStatus === 'won',
+      created_at: new Date()
+    }
+    
+    fetch('/api/actions/submit-response', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
     })
-    .then(response => {
-      let data = response.json()
-      console.log("Response ------------", data)
-      return data
-    })
-    .then(data => console.log(data))
+      .then(async response => {
+        let data = await response.json()
+        console.log("Response ------------", data)
+        toast.success("Game submitted successfully")
+        return data
+      })
+      .then(data => console.log(data))
     // resetGame()
   }
 
