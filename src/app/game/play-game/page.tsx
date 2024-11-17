@@ -5,7 +5,7 @@ import GameGrid from '@/components/GameGrid'
 import StakeMoneyToPlay from '@/components/StakeMoneyToPlay'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-
+import { Suspense } from 'react'
 
 interface IGame {
   id?: number;
@@ -69,6 +69,7 @@ export default function Page() {
   
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div>
       <Header />
       {paymentStatus === 'pending' ? (
@@ -80,5 +81,6 @@ export default function Page() {
         <GameGrid params={{ actionId, clusterurl }} />
       )}
     </div>
+    </Suspense>
   )
 }
