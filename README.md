@@ -32,7 +32,7 @@ Ensure you have the following installed:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/find-my-cat.git
+   git clone https://github.com/lokesh1jha/find-my-cat.git
    cd find-my-cat
    ```
 
